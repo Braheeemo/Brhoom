@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
+    <title>Preposition Master - Grammar Quiz</title>
+    <style>
+        :root {
+            --primary: #283618;
+            --secondary: #606c38;
+            --accent: #fefae0;
+            --highlight: #dda15e;
+            --text: #343a40;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--accent);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .question-container {
+            margin-bottom: 2rem;
+            animation: slideIn 0.5s ease;
+        }
+
+        .options {
+            display: grid;
+            gap: 10px;
+            margin: 20px 0;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+
+        button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            touch-action: manipulation;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            background: var(--primary);
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none !important;
+        }
+
+        .feedback {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 10px;
+            display: none;
+            animation: popIn 0.3s ease;
+        }
+
+        .correct {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+
+        .incorrect {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .progress {
+            height: 100%;
+            background: var(--highlight);
+            transition: width 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .report-log {
+            margin-top: 30px;
+            border-top: 2px solid var(--primary);
+            padding-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .report-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .watermark {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(40, 54, 24, 0.3);
+            font-size: 0.8rem;
+            font-style: italic;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .score-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-weight: bold;
+            color: var(--highlight);
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+                margin: 10px;
+            }
+            
+            button {
+                padding: 12px 20px;
+                font-size: 0.9rem;
+            }
+            
+            .options {
+                grid-template-columns: 1fr;
+            }
+            
+            .score-counter {
+                position: static;
+                text-align: right;
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="score-counter">Score: <span id="score">0</span></div>
+        <h1>📚 Preposition Master</h1>
+        <div class="progress-bar">
+            <div class="progress" style="width: 0%"></div>
+        </div>
+        <div class="question-container"></div>
+        <div class="feedback"></div>
+        <div class="report-log"></div>
+    </div>
+    <div class="watermark">Created by Ibrahim Salhab, unlock your English potential</div>
+
+    <!-- Firebase Configuration -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCkop7NVeuI8YCMZCxN9faMm6-57Puohf8",
+            authDomain: "quizzing-project.firebaseapp.com",
+            projectId: "quizzing-project",
+            storageBucket: "quizzing-project.firebasestorage.app",
+            messagingSenderId: "735821069161",
+            appId: "1:735821069161:web:6ded9bd16c926a106bdbf8",
+            measurementId: "G-VRF9ENHKB5"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Input sanitization function
+        function sanitizeInput(input) {
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = input;
+            return tempDiv.innerHTML;
+        }
+
+        // Error handling function
+        window.onerror = function(message, source, line, column, error) {
+            console.error('Error:', message, 'Source:', source, 'Line:', line, 'Column:', column, 'Error:', error);
+            return true;
+        };
+
+        const questions = [
+            // Easy (5)
+            { 
+                question: "The book is ___ the shelf.",
+                options: ["on", "in", "at", "by"],
+                answer: "on",
+                difficulty: "easy"
+            },
+            {
+                question: "We'll meet ___ the park entrance.",
+                options: ["at", "on", "in", "under"],
+                answer: "at",
+                difficulty: "easy"
+            },
+            {
+                question: "She's ___ the kitchen cooking.",
+                options: ["in", "on", "at", "over"],
+                answer: "in",
+                difficulty: "easy"
+            },
+            {
+                question: "The picture hangs ___ the wall.",
+                options: ["on", "at", "over", "against"],
+                answer: "on",
+                difficulty: "easy"
+            },
+            {
+                question: "He's sitting ___ the chair.",
+                options: ["on", "in", "at", "under"],
+                answer: "on",
+                difficulty: "easy"
+            },
+
+            // Medium (15)
+            {
+                question: "I've been waiting ___ 30 minutes.",
+                options: ["for", "since", "during", "in"],
+                answer: "for",
+                difficulty: "medium"
+            },
+            {
+                question: "She's passionate ___ classical music.",
+                options: ["about", "with", "for", "on"],
+                answer: "about",
+                difficulty: "medium"
+            },
+            {
+                question: "We're traveling ___ train to Paris.",
+                options: ["by", "on", "with", "in"],
+                answer: "by",
+                difficulty: "medium"
+            },
+            {
+                question: "He's allergic ___ cats.",
+                options: ["to", "with", "for", "about"],
+                answer: "to",
+                difficulty: "medium"
+            },
+            {
+                question: "The solution ___ the problem was simple.",
+                options: ["to", "of", "for", "about"],
+                answer: "to",
+                difficulty: "medium"
+            },
+            {
+                question: "They're arguing ___ the best approach.",
+                options: ["about", "on", "for", "with"],
+                answer: "about",
+                difficulty: "medium"
+            },
+            {
+                question: "I'm good ___ math but bad ___ grammar.",
+                options: ["at, at", "in, in", "at, in", "in, at"],
+                answer: "at, in",
+                difficulty: "medium"
+            },
+            {
+                question: "We're looking forward ___ seeing you.",
+                options: ["to", "for", "at", "with"],
+                answer: "to",
+                difficulty: "medium"
+            },
+            {
+                question: "The novel was adapted ___ a movie.",
+                options: ["into", "to", "for", "with"],
+                answer: "into",
+                difficulty: "medium"
+            },
+            {
+                question: "She insisted ___ paying the bill.",
+                options: ["on", "for", "with", "about"],
+                answer: "on",
+                difficulty: "medium"
+            },
+            {
+                question: "We're concerned ___ your progress.",
+                options: ["about", "with", "for", "at"],
+                answer: "about",
+                difficulty: "medium"
+            },
+            {
+                question: "The store is adjacent ___ the post office.",
+                options: ["to", "by", "with", "at"],
+                answer: "to",
+                difficulty: "medium"
+            },
+            {
+                question: "He was acquitted ___ all charges.",
+                options: ["of", "from", "with", "about"],
+                answer: "of",
+                difficulty: "medium"
+            },
+            {
+                question: "This material is different ___ that one.",
+                options: ["from", "than", "to", "with"],
+                answer: "from",
+                difficulty: "medium"
+            },
+            {
+                question: "We'll proceed ___ your suggestion.",
+                options: ["with", "on", "for", "about"],
+                answer: "with",
+                difficulty: "medium"
+            },
+
+            // Hard (10)
+            {
+                question: "___ behalf of the team, I thank you.",
+                options: ["On", "In", "At", "By"],
+                answer: "On",
+                difficulty: "hard"
+            },
+            {
+                question: "The decision was made ___ conjunction with experts.",
+                options: ["in", "by", "with", "at"],
+                answer: "in",
+                difficulty: "hard"
+            },
+            {
+                question: "His actions were ___ violation of protocol.",
+                options: ["in", "on", "at", "with"],
+                answer: "in",
+                difficulty: "hard"
+            },
+            {
+                question: "The painting is ___ par with museum pieces.",
+                options: ["on", "at", "by", "in"],
+                answer: "on",
+                difficulty: "hard"
+            },
+            {
+                question: "We're operating ___ the assumption that...",
+                options: ["under", "on", "with", "at"],
+                answer: "under",
+                difficulty: "hard"
+            },
+            {
+                question: "The agreement is ___ effect immediately.",
+                options: ["in", "on", "at", "by"],
+                answer: "in",
+                difficulty: "hard"
+            },
+            {
+                question: "___ pain of death, they continued.",
+                options: ["On", "At", "Under", "With"],
+                answer: "On",
+                difficulty: "hard"
+            },
+            {
+                question: "The theory is ___ dispute among scholars.",
+                options: ["in", "on", "at", "under"],
+                answer: "in",
+                difficulty: "hard"
+            },
+            {
+                question: "They communicated ___ means of encrypted messages.",
+                options: ["by", "with", "through", "on"],
+                answer: "by",
+                difficulty: "hard"
+            },
+            {
+                question: "The estate was settled ___ accordance with the will.",
+                options: ["in", "on", "by", "with"],
+                answer: "in",
+                difficulty: "hard"
+            }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        const reportLog = [];
+        let buttonsDisabled = false;
+
+        function displayQuestion() {
+            buttonsDisabled = false;
+            const q = questions[currentQuestion];
+            const questionHTML = `
+                <h3>Question ${currentQuestion + 1}: ${sanitizeInput(q.question)}</h3>
+                <div class="options">
+                    ${q.options.map(opt => `
+                        <button onclick="handleAnswer('${sanitizeInput(opt)}')">${sanitizeInput(opt)}</button>
+                    `).join('')}
+                </div>
+            `;
+            document.querySelector('.question-container').innerHTML = questionHTML;
+            updateProgress();
+            document.getElementById('score').textContent = score;
+        }
+
+        function handleAnswer(selected) {
+            if (buttonsDisabled) return;
+            buttonsDisabled = true;
+            
+            const buttons = document.querySelectorAll('.options button');
+            buttons.forEach(button => {
+                button.disabled = true;
+                button.style.transform = 'scale(0.98)';
+            });
+
+            const q = questions[currentQuestion];
+            const correct = q.answer;
+            const feedback = document.querySelector('.feedback');
+            
+            if (selected !== correct) {
+                buttons.forEach(button => {
+                    if (button.textContent === correct) {
+                        button.style.background = '#28a745';
+                        button.style.color = 'white';
+                    }
+                });
+            }
+
+            const isCorrect = selected === correct;
+
+            feedback.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+            feedback.innerHTML = isCorrect 
+                ? `🎉 Correct! Well done!` 
+                : `❌ Try again! Correct answer: <strong>${sanitizeInput(correct)}</strong>`;
+            
+            feedback.style.display = 'block';
+            
+            if (isCorrect) score++;
+            document.getElementById('score').textContent = score;
+
+            reportLog.push({
+                question: sanitizeInput(q.question),
+                userAnswer: sanitizeInput(selected),
+                correctAnswer: sanitizeInput(correct),
+                difficulty: q.difficulty
+            });
+
+            updateReportLog();
+            
+            setTimeout(() => {
+                currentQuestion++;
+                if (currentQuestion < questions.length) {
+                    displayQuestion();
+                } else {
+                    showFinalResults();
+                }
+            }, 2000);
+        }
+
+        function updateProgress() {
+            const progress = (currentQuestion / questions.length) * 100;
+            document.querySelector('.progress').style.width = `${progress}%`;
+        }
+
+        function updateReportLog() {
+            const logContainer = document.querySelector('.report-log');
+            const lastEntry = reportLog[reportLog.length - 1];
+            
+            const entry = document.createElement('div');
+            entry.className = `report-item ${lastEntry.userAnswer === lastEntry.correctAnswer ? 'correct' : 'incorrect'}`;
+            entry.innerHTML = `
+                <strong>Q${reportLog.length}:</strong> 
+                ${lastEntry.userAnswer === lastEntry.correctAnswer ? '✓' : '✗'} 
+                ${lastEntry.question.replace('___', `<u>${sanitizeInput(lastEntry.correctAnswer)}</u>`)}
+                <span class="difficulty-tag">${lastEntry.difficulty}</span>
+            `;
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function showFinalResults() {
+            document.querySelector('.question-container').innerHTML = `
+                <div class="final-results">
+                    <h2>Quiz Complete! 🎓</h2>
+                    <p>Your final score: ${score}/${questions.length}</p>
+                    <button onclick="location.reload()">Try Again</button>
+                    <button onclick="showReport()" style="margin-top:10px">View Detailed Report</button>
+                </div>
+            `;
+            document.querySelector('.feedback').style.display = 'none';
+        }
+
+        function showReport() {
+            const reportContent = reportLog.map((entry, index) => `
+                <div class="report-item ${entry.userAnswer === entry.correctAnswer ? 'correct' : 'incorrect'}">
+                    <strong>Q${index + 1}:</strong> 
+                    ${entry.question.replace('___', `<u>${sanitizeInput(entry.correctAnswer)}</u>`)}<br>
+                    Your answer: ${sanitizeInput(entry.userAnswer)}<br>
+                    Difficulty: ${entry.difficulty}
+                </div>
+            `).join('');
+            
+            document.querySelector('.report-log').innerHTML = `
+                <h3>Detailed Report:</h3>
+                ${reportContent}
+            `;
+        }
+
+        // Initialize quiz
+        displayQuestion();
+    </script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preposition Master - Sign Up/Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { padding: 20px; border: 1px solid #ddd; border-radius: 5px; margin: 20px 0; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Preposition Master</h1>
+    
+    <div id="authSection">
+        <h2>Sign Up / Login</h2>
+        <div class="container">
+            <form id="signupForm">
+                <div><label>Email:</label><input type="email" id="email" required></div>
+                <div><label>Password:</label><input type="password" id="password" required></div>
+                <button type="submit" id="signupBtn">Sign Up</button>
+            </form>
+            <form id="loginForm" style="margin-top: 20px;">
+                <div><label>Email:</label><input type="email" id="loginEmail" required></div>
+                <div><label>Password:</label><input type="password" id="loginPassword" required></div>
+                <button type="submit" id="loginBtn">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="waitingSection" class="container" style="display:none">
+        <h2>Thank you for registering!</h2>
+        <p>Your account is pending admin approval.</p>
+        <p>Please check back later.</p>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCkop7NVeuI8YCMZCxN9faMm6-57Puohf8",
+            authDomain: "quizzing-project.firebaseapp.com",
+            projectId: "quizzing-project",
+            storageBucket: "quizzing-project.firebasestorage.app",
+            messagingSenderId: "735821069161",
+            appId: "1:735821069161:web:6ded9bd16c926a106bdbf8",
+            measurementId: "G-VRF9ENHKB5"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Sign-up function
+        document.getElementById('signupForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    db.collection('users').doc(user.uid).set({
+                        email: user.email,
+                        approved: false
+                    });
+                    document.getElementById('authSection').style.display = 'none';
+                    document.getElementById('waitingSection').style.display = 'block';
+                })
+                .catch((error) => {
+                    alert(error.message);
+                });
+        });
+
+        // Login function
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    db.collection('users').doc(user.uid).get()
+                        .then((doc) => {
+                            if (doc.exists) {
+                                const userData = doc.data();
+                                if (userData.approved) {
+                                    window.location.href = 'quiz.html';
+                                } else {
+                                    alert("Your account is pending approval.");
+                                }
+                            }
+                        });
+                })
+                .catch((error) => {
+                    alert(error.message);
+                });
+        });
+    </script>
+</body>
+</html>
